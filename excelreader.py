@@ -1,12 +1,9 @@
 # encoding: utf-8
 from docx import Document
 from docx.shared import Inches
-import sys,json,os,zipfile,xlrd
+import sys,json,os,zipfile,xlrd,hashlib
 reload(sys) 
-sys.setdefaultencoding('utf-8') 
-
-data = xlrd.open_workbook(u'sourcedata.xls')
-table = data.sheet_by_index(0)
+sys.setdefaultencoding('utf-8')
 
 def rmdir(top):
     for root, dirs, files in os.walk(top, topdown=False):
@@ -44,7 +41,9 @@ def replace_file(filename, replace_dict):
 
 def replace_with_template(template, docxname, project_no, project, project_en, date, date_en):
     f = zipfile.ZipFile(template)
-    tmpdir = '.tmp' + docxname
+    m2 = hashlib.md5()   
+    m2.update(docxname)
+    tmpdir = '.tmp' + m2.hexdigest()
     f.extractall(tmpdir)
 
     doc_dict = {
@@ -62,8 +61,13 @@ def replace_with_template(template, docxname, project_no, project, project_en, d
     zip_dir(tmpdir, docxname)
     rmdir(tmpdir)
 
-for i in range(table.nrows):
-    if i==0:
-        continue
-    col = table.row_values(i)
-    replace_with_template('template.docx', ''.join(['Section ', str(col[0]), '.docx']), col[1], col[2], col[3], col[4], col[5])
+def process_excel_1(source, template, outdir):
+    data = xlrd.open_workbook(source)
+    table = data.sheet_by_index(0)
+    for i in range(table.nrows):
+        if i==0:
+            continue
+        col = table.row_values(i)
+        replace_with_template(template, ''.join([outdir, '/','Section', str(col[0]), '.docx']), col[1], col[2], col[3], col[4], col[5])
+
+#process_excel_1(u'sourcedata.xls', 'template.docx', '.')
