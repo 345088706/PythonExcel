@@ -1,6 +1,4 @@
 # encoding: utf-8
-from docx import Document
-from docx.shared import Inches
 import sys,json,os,zipfile,xlrd,hashlib
 reload(sys) 
 sys.setdefaultencoding('utf-8')
@@ -61,15 +59,19 @@ def replace_with_template(template, docxname, project_no, project, project_en, d
     zip_dir(tmpdir, docxname)
     rmdir(tmpdir)
 
-def replace_with_template_dict(template, docxname, replace_dict):
+def replace_with_template_dict(template, outdir, docxname, replace_dict):
     f = zipfile.ZipFile(template)
     m2 = hashlib.md5()   
     m2.update(docxname)
     tmpdir = '.tmp' + m2.hexdigest()
     f.extractall(tmpdir)
-    replace_file(tmpdir + '/word/document.xml', replace_dict)   # 替换word文档主要文本内容
-    replace_file(tmpdir + '/word/footer1.xml', replace_dict)    # 替换脚注
-    zip_dir(tmpdir, docxname)
+    if os.path.exists(tmpdir + '/word/document.xml'):
+        replace_file(tmpdir + '/word/document.xml', replace_dict)   # 替换word文档主要文本内容
+    if os.path.exists(tmpdir + '/word/footer1.xml'):
+        replace_file(tmpdir + '/word/footer1.xml', replace_dict)    # 替换脚注
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
+    zip_dir(tmpdir, ''.join([outdir, '/', docxname]))
     rmdir(tmpdir)
 
 def process_excel_1(source, template, outdir):
@@ -83,9 +85,17 @@ def process_excel_1(source, template, outdir):
             replace_with_template(template, ''.join([outdir, '/','Section', str(col[0]), '.docx']), col[1], col[2], col[3], col[4], col[5])
 
 #process_excel_1(u'sourcedata.xls', 'template.docx', '.')
+def isNum(value):
+    try:
+        value * 1
+    except TypeError:
+        return False
+    else:
+        return True
 
 def process_with_config(config_file_path, outdir):
     config = None
+    config_base_dir = os.path.dirname(config_file_path)
     # 读取配置文档
     with open(config_file_path, 'r') as config_file:
         config = json.loads(str(config_file.read()), encoding='utf-8')
@@ -97,7 +107,7 @@ def process_with_config(config_file_path, outdir):
         templates = task['templates']
         keywords = task['keywords']
 
-        data = xlrd.open_workbook(source)   # 打开Excel源数据
+        data = xlrd.open_workbook(''.join([config_base_dir,'/',source]))   # 打开Excel源数据
         table = data.sheet_by_index(0)
 
         dict_with_id = {}
@@ -108,19 +118,22 @@ def process_with_config(config_file_path, outdir):
             if i==0:
                 continue
             col = table.row_values(i)
-            if str(col[0]).isdigit():       #  序号为数字时才处理
+            if isNum(col[0]):       #  序号为数字时才处理
                 dict_replace = {}           #  生成关键词替换字典
                 for (keystring, col_id) in dict_with_id.items():
                     dict_replace[keystring] = str(col[col_id])
                 # 执行模版doc关键词替换
                 for template in templates:
                     replace_with_template_dict(
-                        template['file'], 
-                        ''.join([outdir, '/', template['name'],'.docx']), 
+                        ''.join([config_base_dir,'/',template['file']]), 
+                        '/'.join([outdir, task['project'], template['outdir']]),
+                         ''.join([template['name'],'.docx']), 
                         dict_replace)
 
+                zip_dir('/'.join([outdir,task['project']]), task['project']+'.zip')
 
 
 
 
-#process_with_config('template.json', 'demo')
+
+process_with_config(u'C:/Users/tomic/Desktop/新建文件夹/template.json', 'demo')
