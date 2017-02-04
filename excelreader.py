@@ -61,6 +61,17 @@ def replace_with_template(template, docxname, project_no, project, project_en, d
     zip_dir(tmpdir, docxname)
     rmdir(tmpdir)
 
+def replace_with_template_dict(template, docxname, replace_dict):
+    f = zipfile.ZipFile(template)
+    m2 = hashlib.md5()   
+    m2.update(docxname)
+    tmpdir = '.tmp' + m2.hexdigest()
+    f.extractall(tmpdir)
+    replace_file(tmpdir + '/word/document.xml', replace_dict)   # 替换word文档主要文本内容
+    replace_file(tmpdir + '/word/footer1.xml', replace_dict)    # 替换脚注
+    zip_dir(tmpdir, docxname)
+    rmdir(tmpdir)
+
 def process_excel_1(source, template, outdir):
     data = xlrd.open_workbook(source)
     table = data.sheet_by_index(0)
@@ -68,6 +79,48 @@ def process_excel_1(source, template, outdir):
         if i==0:
             continue
         col = table.row_values(i)
-        replace_with_template(template, ''.join([outdir, '/','Section', str(col[0]), '.docx']), col[1], col[2], col[3], col[4], col[5])
+        if str(col[0]).isdigit(): ##  序号为数字时才处理
+            replace_with_template(template, ''.join([outdir, '/','Section', str(col[0]), '.docx']), col[1], col[2], col[3], col[4], col[5])
 
 #process_excel_1(u'sourcedata.xls', 'template.docx', '.')
+
+def process_with_config(config_file_path, outdir):
+    config = None
+    # 读取配置文档
+    with open(config_file_path, 'r') as config_file:
+        config = json.loads(str(config_file.read()), encoding='utf-8')
+        config_file.close()
+    if not config:
+        return
+    for task in config:
+        source = task['source']
+        templates = task['templates']
+        keywords = task['keywords']
+
+        data = xlrd.open_workbook(source)   # 打开Excel源数据
+        table = data.sheet_by_index(0)
+
+        dict_with_id = {}
+        for keyword in keywords:            # 生成关键词与Excel表格列号对应关系
+            dict_with_id[ keyword['string'] ] = keyword['index']
+
+        for i in range(table.nrows):
+            if i==0:
+                continue
+            col = table.row_values(i)
+            if str(col[0]).isdigit():       #  序号为数字时才处理
+                dict_replace = {}           #  生成关键词替换字典
+                for (keystring, col_id) in dict_with_id.items():
+                    dict_replace[keystring] = str(col[col_id])
+                # 执行模版doc关键词替换
+                for template in templates:
+                    replace_with_template_dict(
+                        template['file'], 
+                        ''.join([outdir, '/', template['name'],'.docx']), 
+                        dict_replace)
+
+
+
+
+
+#process_with_config('template.json', 'demo')
