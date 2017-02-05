@@ -141,6 +141,8 @@ def process_with_config(config_file_path, outdir):
                 # 如果存在需要被替换的word文档则替换
                 out_doc_name = None
                 out_dir = os.path.join(item_path, template['outdir'])
+                if not os.path.exists(out_dir):
+                    os.makedirs(out_dir)
                 if 'file' in template:
                     out_doc_name = template['name'] + '.docx'
                     in_doc_name = os.path.join(config_base_dir, template['file'])
