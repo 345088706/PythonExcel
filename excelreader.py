@@ -37,28 +37,6 @@ def replace_file(filename, replace_dict):
             w.write(text)
             w.close()
 
-def replace_with_template(template, docxname, project_no, project, project_en, date, date_en):
-    f = zipfile.ZipFile(template)
-    m2 = hashlib.md5()   
-    m2.update(docxname)
-    tmpdir = '.tmp' + m2.hexdigest()
-    f.extractall(tmpdir)
-
-    doc_dict = {
-        '{project_no}': project_no,
-        '{project}': project,
-        '{project_en}': project_en,
-        '{date}': date,
-        '{date_en}': date_en
-    }
-    footer_dict = {
-        '{project_no}': project_no
-    }
-    replace_file(tmpdir + '/word/document.xml', doc_dict)
-    replace_file(tmpdir + '/word/footer1.xml', footer_dict)
-    zip_dir(tmpdir, docxname)
-    rmdir(tmpdir)
-
 def replace_with_template_dict(template, outdir, docxname, replace_dict):
     f = zipfile.ZipFile(template)
     m2 = hashlib.md5()
@@ -77,17 +55,6 @@ def replace_with_template_dict(template, outdir, docxname, replace_dict):
     zip_dir(tmpdir, os.path.join(outdir, docxname))
     rmdir(tmpdir)
 
-def process_excel_1(source, template, outdir):
-    data = xlrd.open_workbook(source)
-    table = data.sheet_by_index(0)
-    for i in range(table.nrows):
-        if i==0:
-            continue
-        col = table.row_values(i)
-        if str(col[0]).isdigit(): ##  序号为数字时才处理
-            replace_with_template(template, ''.join([outdir, '/','Section', str(col[0]), '.docx']), col[1], col[2], col[3], col[4], col[5])
-
-#process_excel_1(u'sourcedata.xls', 'template.docx', '.')
 def isNum(value):
     try:
         value * 1
