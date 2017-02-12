@@ -63,6 +63,15 @@ def isNum(value):
     else:
         return True
 
+# 特殊符号转义
+def escape(_str):
+    tmpStr = _str.replace('<', '&lt;')
+    tmpStr = tmpStr.replace('>', '&gt;')
+    tmpStr = tmpStr.replace('&', '&amp;')
+    tmpStr = tmpStr.replace('\'', '&apos;')
+    tmpStr = tmpStr.replace('\"', '&quot;')
+    return tmpStr
+    
 def process_with_config(config_file_path, outdir):
     config = None
     config_base_dir = os.path.dirname(config_file_path)
@@ -96,7 +105,7 @@ def process_with_config(config_file_path, outdir):
             #  序号为数字时才处理
             dict_replace = {}           #  生成关键词替换字典
             for (keystring, col_id) in dict_with_id.items():
-                dict_replace[keystring] = str(col[col_id])
+                dict_replace[keystring] = escape(str(col[col_id]))
 
             # 生成单条数据文件夹名字
             item_name = str(col[unique_key_id])
@@ -136,4 +145,4 @@ def process_with_config(config_file_path, outdir):
             zip_dir(item_path, final_zip_name)                          # 压缩打包
 
 
-process_with_config(u'C:/Users/tomic/Desktop/新建文件夹/template.json', '.')
+#process_with_config(u'C:/Users/tomic/Desktop/新建文件夹/template.json', '.')
