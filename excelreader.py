@@ -1,5 +1,5 @@
 # encoding: utf-8
-import sys,json,os,zipfile,xlrd,hashlib
+import sys,json,os,zipfile,xlrd,hashlib,re
 reload(sys) 
 sys.setdefaultencoding('utf-8')
 
@@ -37,6 +37,15 @@ def replace_file(filename, replace_dict):
             w.write(text)
             w.close()
 
+__FOOTER_RE__ = re.compile('footer\d+\.xml', re.I)
+
+def extract_and_replace_footer_in_doc(footer_base_dir, r_dict):
+    for footer_path in os.listdir(footer_base_dir):
+        if re.match(__FOOTER_RE__, footer_path):
+            footer_file_path = os.path.join(footer_base_dir, footer_path)
+            if os.path.isfile(footer_file_path):
+                replace_file(footer_file_path, r_dict)
+
 def replace_with_template_dict(template, outdir, docxname, replace_dict):
     f = zipfile.ZipFile(template)
     m2 = hashlib.md5()
@@ -48,8 +57,7 @@ def replace_with_template_dict(template, outdir, docxname, replace_dict):
     f.extractall(tmpdir)
     if os.path.exists(tmpdir + '/word/document.xml'):
         replace_file(tmpdir + '/word/document.xml', replace_dict)   # 替换word文档主要文本内容
-    if os.path.exists(tmpdir + '/word/footer1.xml'):
-        replace_file(tmpdir + '/word/footer1.xml', replace_dict)    # 替换脚注
+    extract_and_replace_footer_in_doc(tmpdir + '/word', replace_dict)    # 替换脚注
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     zip_dir(tmpdir, os.path.join(outdir, docxname))
